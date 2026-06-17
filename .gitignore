@@ -1,0 +1,25 @@
+# === Unreal Engine 생성물 (커밋 금지) ===
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+Build/
+
+# IDE / 빌드 보조
+.vs/
+.vscode/
+.idea/
+*.sln
+*.suo
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.opendb
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 회고 도구 일회용 출력
+/retro-bundle.md

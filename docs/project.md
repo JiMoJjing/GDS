@@ -25,7 +25,7 @@
 
 ### 네트워크
 - Dedicated Server에서의 서버 권위적 판정
-- `ReplicationCondition`을 활용한 **팀 기반 정보 은닉** (상대/특정 정보를 클라이언트에 숨기기)
+- `ReplicationCondition`을 활용한 **조건부 선택적 복제** (스캔/마킹한 적의 상세 정보를 스캐너·분대에게만 복제 — Co-op PvE라 PvP식 팀 은닉 대신 이 방향. 상세는 `roadmap.md` 결정 포인트 2)
 - 네트워크 최적화: Network Relevancy, Dormancy
 - Hitscan 무기를 위한 Lag Compensation
 

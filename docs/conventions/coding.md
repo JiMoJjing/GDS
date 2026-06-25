@@ -56,12 +56,31 @@ if (bIsDead) {
 - 복제 프로퍼티는 `GetLifetimeReplicatedProps`에 반드시 등록한다. 조건부 복제는 여기서 `COND_` 또는 `ReplicationCondition`으로 지정한다.
 - const 정확성을 지킨다. 변경하지 않는 참조/메서드는 `const`.
 - 포인터는 사용 전 유효성 검사. (`IsValid()` 등)
+- 비동기/지연 콜백(AbilityTask 델리게이트, 타이머, latent, async load, RPC 응답)에 넘기는 람다는 UObject를 `TWeakObjectPtr`로 캡처하고 진입 시 유효성을 검증한다. raw `[this]`/`[=]` 캡처 금지 — 근거와 바인딩 규칙은 `constraints.md` 5항.
 
 ## 5. 로깅
 
-- 프로젝트 전용 로그 카테고리를 정의해 사용한다. (`UE_LOG`에 엔진 기본 카테고리를 남발하지 않는다.)
-- 로그 카테고리명: `LogGDS`
-- 임시 디버그 로그는 커밋 전에 정리하거나, 의도된 것이면 verbosity를 낮춘다.
+> 이 프로젝트는 Dedicated Server + 서버 권위 구조라, 중요한 사건(GE 적용, attribute 복제, OnRep, RPC validation, ReplicationCondition 결과)이 **화면에 안 보이고 두 프로세스에 걸쳐** 일어난다. 그래서 로그는 디버그 보조가 아니라 **1차 관측·검증면**이다. 검증은 사람이 하되, 로그가 그 판정의 증거를 댄다.
+
+- **전용 카테고리 `LogGDS`를 쓴다.** 엔진 기본 카테고리(`LogTemp` 등)를 남발하지 않는다. 하위 카테고리 분리(`LogGDSNet` 등)는 한 카테고리로 읽기 버거워질 때 가서 나눈다 — 미리 쪼개지 않는다.
+
+- **사실을 남긴다, 결론이 아니라.** 값·net role·순서를 적는다. 코드의 추측("정상 적용됨")은 검증 근거가 못 된다.
+
+```cpp
+// Good — 값과 권위를 사실로 남김 (검증 가능)
+UE_LOG(LogGDS, Log, TEXT("[Server] GE_Damage 적용: Health %.1f -> %.1f"), Old, New);
+
+// Bad — 추측을 적음 (검증 불가)
+UE_LOG(LogGDS, Log, TEXT("데미지 정상 처리됨"));
+```
+
+- **net role를 로그에 박는다.** DS + 클라 다수의 트레이스를 같이 읽어야 하므로, 누가 찍은 로그인지(`[Server]`/`[Client]`)가 줄 자체로 구분돼야 한다. (PIE에서는 인스턴스가 클라를 더 구분해 준다.)
+
+- **verbosity를 perf에 맞춰 게이팅한다.** 검증에 필요한 핵심 사실은 `Log`/`Display`(기본 노출). 핫패스(매 틱·발사체마다·AI마다 등 고빈도)는 **반드시 `Verbose`+**로 내린다. Phase 6 최적화 측정(Unreal Insights)은 기본 verbosity로 도는데, 핫패스 로그가 `Log`에 있으면 트레이스를 오염시켜 측정이 망가진다.
+
+- **로깅의 양은 게이트가 정한다.** "가능한 한 세세하게"가 아니라, 해당 페이즈의 통과 기준(architecture 7·8항)이 **로그만 읽어도 판정 가능한 만큼**이 적정량이다.
+
+- 임시 디버그 로그는 커밋 전에 정리하거나, 남길 가치가 있으면 위 기준(사실·적정 verbosity)에 맞춰 정식 로그로 승격한다.
 
 ## 6. 주석
 

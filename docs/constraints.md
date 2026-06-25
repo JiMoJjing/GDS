@@ -29,15 +29,24 @@
 ## 4. 리플리케이션
 
 - 복제할 필요 없는 것을 복제하지 않는다. (불필요한 `Replicated` 프로퍼티는 곧 대역폭 낭비다.)
-- 모든 게 모두에게 보여야 하는 건 아니다. 팀 기반 정보는 `ReplicationCondition`으로 대상 클라이언트를 제한한다.
+- 모든 게 모두에게 보여야 하는 건 아니다. 대상이 제한된 정보(스캔/마킹한 적 상세 등)는 `ReplicationCondition`으로 받을 클라이언트를 제한한다.
 - RPC는 `Server`/`Client`/`Multicast` 의미를 정확히 구분해 쓰고, `Server` RPC에는 검증(validation)을 붙인다.
 
-## 5. API / 환경
+## 5. 콜백 · 델리게이트 수명 안전성
+
+> 이 프로젝트는 비동기·지연 콜백이 많다 — GAS의 AbilityTask 델리게이트, 타이머(`FTimerManager`), latent action, async asset load, 그리고 `Server`/`Client` RPC 응답. 이런 콜백이 발동될 시점엔 **캡처한 객체가 이미 파괴됐을 수 있다** (Pawn destroy, ASC 정리, seamless travel 등). raw 캡처는 거기서 use-after-free로 터진다.
+
+- 람다를 **수명이 불확실한 콜백**(위 비동기/지연 계열)에 넘길 때, `this`나 다른 UObject 포인터를 **raw로 캡처(`[this]`, `[=]`)하지 않는다.**
+- UObject는 `TWeakObjectPtr`로 캡처하고, 콜백 진입 시 `IsValid()`/`Get()`으로 유효성을 검증한 뒤 접근한다. (UE에서 UObject 약참조의 표준은 `TWeakObjectPtr`다. `TSharedPtr`/`CreateSP`는 Slate 등 비-UObject 객체용이며, GAS/액터 계층에는 적용하지 않는다.)
+- 델리게이트 바인딩은 **약참조 형태를 우선**한다 — `AddWeakLambda`, `AddUObject`, `BindWeakLambda` 등. 멤버 함수 바인딩은 대상 UObject가 파괴되면 자동으로 끊기지만, raw 람다는 그렇지 않다.
+- 같은 클래스 안에서 약참조 바인딩과 `[this]` raw 람다를 **혼용하지 않는다.** 한쪽이 안전하면 다른 쪽도 같은 방식으로 맞춘다. (혼용은 "여긴 왜 안 했지"를 만들어 누락의 온상이 된다.)
+
+## 6. API / 환경
 
 - deprecated API를 쓰지 않는다. **UE 5.4 기준의 현행 API**를 사용한다. 5.5 이상에서만 존재하는 API는 쓰지 않는다. 확실치 않으면 멈추고 묻는다.
 - 이 프로젝트는 **C++ 우선**이다. Blueprint 전용 동작을 전제로 설계하지 않는다.
 - 매직 넘버/하드코딩 경로를 피한다. 설정값은 정해진 위치(Config, DataAsset 등)에 둔다.
 
-## 6. 불확실할 때
+## 7. 불확실할 때
 
 위 규칙 중 무엇을 적용해야 할지 모호하거나, 규칙끼리 충돌하는 것처럼 보이면 → **구현을 멈추고 어떤 점이 불명확한지 보고한다.** (AGENTS.md 2항)

@@ -45,10 +45,10 @@ GE 기반 데미지 처리를 위한 기반 Attribute. 직접 수정 금지,
 ```
 
 ```
-net(network): 적 위치 정보에 ReplicationCondition 적용
+net(network): 스캔한 적 상세 정보에 ReplicationCondition 적용
 
-같은 팀에게만 미니맵 정보가 복제되도록 COND_ 조건 지정.
-팀 기반 정보 은닉 요구사항 충족.
+스캔/마킹한 적의 체력바·약점 정보가 스캐너 분대에게만 복제되도록 COND_ 조건 지정.
+조건부 선택적 복제 + 대역폭 최적화 요구사항 충족.
 ```
 
 ```

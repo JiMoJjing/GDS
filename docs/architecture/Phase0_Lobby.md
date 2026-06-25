@@ -23,16 +23,17 @@
 - `AGDSMainGameMode` — 뼈대
 - `AGDSMainGameState` — 뼈대 (Phase 5에서 웨이브 상태로 채워질 자리)
 - `AGDSPlayerState` — `bIsRoomOwner`, `bIsReady` (둘 다 복제 + `OnRep_`). 각 `OnRep_`에서 상태 변경 델리게이트를 발생시킴. Seamless Travel에 보존됨
-- `AGDSPlayerController` — 레디 토글 요청(`ServerSetReady` 송신), 시작 요청(`ServerRequestStart` 송신, 방장만), `OnRep_bIsReady` 수신 시 "전원 레디" 재평가. Seamless Travel에 보존됨
+- `AGDSPlayerController` — 레디 토글 요청(`ServerSetReady` 송신), 시작 요청(`ServerRequestStart` 송신), 로컬에서 GameState 준비 감지와 LobbyWidget 생성·제거 담당. Seamless Travel에 보존됨
 - `AGDSCharacter` — 로비·게임플레이 공용 스폰, 전환 시 재스폰. 이동은 Phase 0 범위에서 제외
 - `ULobbyWidget` — 레디 버튼, 시작 버튼, 전체 플레이어 목록 소유. `AGDSLobbyGameState`의 목록 변경을 구독하고 `PlayerArray`를 기준으로 목록과 시작 버튼 상태를 갱신
-- `ULobbyPlayerEntryWidget` — 하나의 `AGDSPlayerState`를 구독해 플레이어 이름, 방장 여부, 레디 여부를 표시
+- `ULobbyPlayerEntryWidget` — 하나의 `AGDSPlayerState`를 구독해 `PlayerName`·`PlayerId`, 방장 여부, 레디 여부를 표시
 
 **관계:** GameMode가 PlayerState의 `bIsRoomOwner`를 설정(서버 권위). PlayerController는 자신의 PlayerState를 통해 레디를 요청한다. 로컬 PlayerController는 `UWorld::GameStateSetEvent`를 구독하고 로비 GameState가 준비되면 해당 인스턴스를 LobbyWidget 생성 시 주입한다. LobbyWidget은 주입받은 GameState의 `PlayerArray`와 각 PlayerState의 상태 변경 델리게이트를 구독해 목록을 표시하고, 방장 클라이언트에서 전원 레디를 판정한다. 이벤트 등록 전에 GameState가 준비됐을 수 있으므로 등록 직후 현재 GameState도 확인하고, UI 바인딩 직후 현재 값을 직접 읽어 최초 상태를 동기화한다.
 
 ## 4. 데이터 / 실행 흐름
 
 - **접속:** 클라 접속 → `GameMode::PostLogin` → 첫 접속자면 해당 `PlayerState::bIsRoomOwner = true`(서버) → 복제 → 모든 클라 UI에 방장 표시
+- **UI 준비:** 로컬 PlayerController가 Playing 상태 진입 → `UWorld::GameStateSetEvent` 구독 + 현재 GameState 즉시 확인 → `AGDSLobbyGameState`라면 LobbyWidget 생성 후 GameState 주입
 - **플레이어 목록:** `GameState::AddPlayerState`/`RemovePlayerState` → 목록 변경 델리게이트 → 각 클라 LobbyWidget이 `PlayerArray`를 기준으로 행 추가·제거 및 상태 바인딩
 - **레디:** 클라 입력 → `PlayerController::ServerSetReady(bool)` → 서버가 `PlayerState::bIsReady` 변경 → 복제 → 각 클라 `OnRep_bIsReady` → 상태 변경 델리게이트 → LobbyWidget/PlayerEntryWidget 갱신 → 방장 클라는 전원 레디 재평가 → 만족 시 시작 버튼 로컬 활성화(서버 미통지)
 - **시작:** 방장 클라 입력 → `PlayerController::ServerRequestStart()` → 서버가 (a) 요청자가 현재 방장인지 (b) 전원 `bIsReady`인지 재검증 → 통과 시 `ServerTravel`(Seamless) 호출, 실패 시 거절
@@ -53,8 +54,10 @@
 
 - `bIsRoomOwner`/`bIsReady` 둘 다 `OnRep_` 콜백을 가져야 한다. 생성자/`BeginPlay`에서 복제값을 기다리지 않는다(`constraints.md` 3항).
 - `ServerSetReady`는 호출자 자신의 PlayerState만 변경 가능하도록 서버에서 검증한다.
-- `PlayerState`의 포인터를 UI 행의 내부 식별자로 사용한다. 표시는 기본 복제되는 `PlayerName`과 `PlayerId`를 함께 사용하며, 상태 변경 델리게이트에 별도 식별 데이터를 복제하거나 복사하지 않는다.
-- LobbyWidget은 델리게이트가 아닌 `GameState::PlayerArray`의 실제 PlayerState 값을 읽어 시작 버튼을 판정한다. 조건은 로컬 PlayerState가 방장이고, 목록이 비어 있지 않으며, 방장을 포함한 모든 PlayerState가 레디인 경우다.
+- 플레이어 목록은 엔진이 관리하는 `GameState::PlayerArray`를 사용하고 별도 복제 배열을 만들지 않는다.
+- `PlayerState` 포인터를 UI 행의 내부 식별자로 사용한다. 표시는 기본 복제되는 `PlayerName`과 `PlayerId`를 함께 사용하며, 상태 변경 델리게이트에 별도 식별 데이터를 복제하거나 복사하지 않는다.
+- LobbyWidget은 `GameState::PlayerArray`의 실제 PlayerState 값을 읽어 시작 버튼을 판정한다. 조건은 로컬 PlayerState가 방장이고, 목록이 비어 있지 않으며, 방장을 포함한 모든 PlayerState가 레디인 경우다.
+- LobbyWidget은 GameState를 매 프레임 탐색하지 않는다. PlayerController가 `UWorld::GameStateSetEvent`로 준비를 감지해 주입하며, Travel·`EndPlay`에서 이벤트 구독과 위젯을 정리한다.
 - Seamless Travel 사용 시 `GameMode::bUseSeamlessTravel = true` 설정이 필요하며, 전환 후 `AGDSMainGameMode` 쪽 초기화 순서가 "PlayerState/Controller가 이미 보존되어 있다"는 전제를 깨지 않아야 한다. (Phase 1에서 ASC 초기화 타이밍과의 상호작용 재점검 필요 — 9항 참조.)
 
 ## 7. 구현 지시 (Codex용)
@@ -71,6 +74,7 @@
 
 ## 8. 시스템 인수 검증 (전체)
 
+- **결과:** 2026-06-25 통과. DS 1 + 클라 2 PIE에서 레디 동기화, 방장 전용 시작 조건, Seamless Travel 상태 보존, 방장 이탈 승계를 확인함.
 - **시나리오:** DS 1 + 클라 2 PIE → 두 클라 접속 → 방장 자동 지정 확인 → 양쪽 레디 토글 → 방장 시작 버튼 활성화 확인 → 방장이 시작 → Seamless Travel로 메인 레벨 전환 + PlayerState 값 보존 로그 확인 → (별도 케이스) 방장 접속 종료 → 남은 클라가 새 방장으로 승계되고 레디 상태가 유지되는지 확인
 - **서버-클라 검증:** 로그에 `[Server]`/`[Client]` 태그로 방장 지정/레디 변경/시작 검증/Travel 트리거 시점을 모두 남겨, PIE 멀티 인스턴스에서 교차 확인한다.
 - **증명 목표 시연 여부:** 서버 권위(방장 지정·시작 검증), RPC 구조(Server RPC + validation), 복제(OnRep 기반 상태 동기화)를 시연한다. `ReplicationCondition`/Lag Compensation 등은 이 시스템 스코프가 아니다(Phase 4/이후).

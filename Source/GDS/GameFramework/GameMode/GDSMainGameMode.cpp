@@ -1,11 +1,11 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "GDS/GameFramework/GDSMainGameMode.h"
+#include "GDS/GameFramework/GameMode/GDSMainGameMode.h"
 
-#include "GDS/GameFramework/GDSCharacter.h"
-#include "GDS/GameFramework/GDSMainGameState.h"
-#include "GDS/GameFramework/GDSPlayerController.h"
-#include "GDS/GameFramework/GDSPlayerState.h"
+#include "GDS/GameFramework/Character/GDSCharacter.h"
+#include "GDS/GameFramework/GameState/GDSMainGameState.h"
+#include "GDS/GameFramework/PlayerController/GDSPlayerController.h"
+#include "GDS/GameFramework/PlayerState/GDSPlayerState.h"
 
 AGDSMainGameMode::AGDSMainGameMode()
 {

@@ -1,12 +1,12 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "GDS/GameFramework/GDSLobbyGameMode.h"
+#include "GDS/GameFramework/GameMode/GDSLobbyGameMode.h"
 
 #include "GDS/GDS.h"
-#include "GDS/GameFramework/GDSCharacter.h"
-#include "GDS/GameFramework/GDSLobbyGameState.h"
-#include "GDS/GameFramework/GDSPlayerController.h"
-#include "GDS/GameFramework/GDSPlayerState.h"
+#include "GDS/GameFramework/Character/GDSCharacter.h"
+#include "GDS/GameFramework/GameState/GDSLobbyGameState.h"
+#include "GDS/GameFramework/PlayerController/GDSPlayerController.h"
+#include "GDS/GameFramework/PlayerState/GDSPlayerState.h"
 
 AGDSLobbyGameMode::AGDSLobbyGameMode()
 {

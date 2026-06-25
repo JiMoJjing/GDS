@@ -1,12 +1,12 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "GDS/GameFramework/GDSPlayerController.h"
+#include "GDS/GameFramework/PlayerController/GDSPlayerController.h"
 
 #include "GDS/GDS.h"
-#include "GDS/GameFramework/GDSLobbyGameMode.h"
-#include "GDS/GameFramework/GDSLobbyGameState.h"
-#include "GDS/GameFramework/GDSPlayerState.h"
-#include "GDS/UI/LobbyWidget.h"
+#include "GDS/GameFramework/GameMode/GDSLobbyGameMode.h"
+#include "GDS/GameFramework/GameState/GDSLobbyGameState.h"
+#include "GDS/GameFramework/PlayerState/GDSPlayerState.h"
+#include "GDS/UI/Lobby/LobbyWidget.h"
 #include "Engine/World.h"
 
 void AGDSPlayerController::RequestSetReady(bool bNewReady)

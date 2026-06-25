@@ -1,6 +1,6 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "GDS/GameFramework/GDSLobbyGameState.h"
+#include "GDS/GameFramework/GameState/GDSLobbyGameState.h"
 
 void AGDSLobbyGameState::AddPlayerState(APlayerState* PlayerState)
 {

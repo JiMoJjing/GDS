@@ -1,12 +1,12 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "GDS/UI/LobbyPlayerEntryWidget.h"
+#include "GDS/UI/Lobby/LobbyPlayerEntryWidget.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/TextBlock.h"
-#include "GDS/GameFramework/GDSPlayerState.h"
+#include "GDS/GameFramework/PlayerState/GDSPlayerState.h"
 
 void ULobbyPlayerEntryWidget::InitializePlayerState(AGDSPlayerState* InPlayerState)
 {

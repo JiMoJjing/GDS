@@ -1,6 +1,6 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "GDS/GameFramework/GDSPlayerState.h"
+#include "GDS/GameFramework/PlayerState/GDSPlayerState.h"
 
 #include "GDS/GDS.h"
 #include "Net/UnrealNetwork.h"

@@ -1,16 +1,16 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "GDS/UI/LobbyWidget.h"
+#include "GDS/UI/Lobby/LobbyWidget.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
-#include "GDS/GameFramework/GDSLobbyGameState.h"
-#include "GDS/GameFramework/GDSPlayerController.h"
-#include "GDS/GameFramework/GDSPlayerState.h"
-#include "GDS/UI/LobbyPlayerEntryWidget.h"
+#include "GDS/GameFramework/GameState/GDSLobbyGameState.h"
+#include "GDS/GameFramework/PlayerController/GDSPlayerController.h"
+#include "GDS/GameFramework/PlayerState/GDSPlayerState.h"
+#include "GDS/UI/Lobby/LobbyPlayerEntryWidget.h"
 
 void ULobbyWidget::InitializeLobbyGameState(AGDSLobbyGameState* InLobbyGameState)
 {

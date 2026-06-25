@@ -28,8 +28,6 @@
 - `ULobbyWidget` — 레디 버튼, 시작 버튼, 전체 플레이어 목록 소유. `AGDSLobbyGameState`의 목록 변경을 구독하고 `PlayerArray`를 기준으로 목록과 시작 버튼 상태를 갱신
 - `ULobbyPlayerEntryWidget` — 하나의 `AGDSPlayerState`를 구독해 `PlayerName`·`PlayerId`, 방장 여부, 레디 여부를 표시
 
-**소스 배치:** GameFramework 클래스는 역할별로 `GameFramework/Character`, `GameFramework/GameMode`, `GameFramework/GameState`, `GameFramework/PlayerController`, `GameFramework/PlayerState`에 둔다. 로비 UI는 `UI/Lobby`에 둔다.
-
 **관계:** GameMode가 PlayerState의 `bIsRoomOwner`를 설정(서버 권위). PlayerController는 자신의 PlayerState를 통해 레디를 요청한다. 로컬 PlayerController는 `UWorld::GameStateSetEvent`를 구독하고 로비 GameState가 준비되면 해당 인스턴스를 LobbyWidget 생성 시 주입한다. LobbyWidget은 주입받은 GameState의 `PlayerArray`와 각 PlayerState의 상태 변경 델리게이트를 구독해 목록을 표시하고, 방장 클라이언트에서 전원 레디를 판정한다. 이벤트 등록 전에 GameState가 준비됐을 수 있으므로 등록 직후 현재 GameState도 확인하고, UI 바인딩 직후 현재 값을 직접 읽어 최초 상태를 동기화한다.
 
 ## 4. 데이터 / 실행 흐름
@@ -89,3 +87,4 @@
 - `ServerRequestStart` 검증 실패 시 클라에 실패 사유를 알릴지 여부 — 현재는 무응답 처리, 추후 UX 필요 시 결정
 - Seamless Travel 환경에서 PlayerState 복제 타이밍과 Phase 1 ASC 초기화 시점의 상호작용 — Phase 1 설계에서 재점검 필요
 - `AGDSMainGameState`의 실제 책임 — 현재 뼈대만 존재하며 Phase 5(웨이브)에서 채워짐
+- `ULobbyWidget`/`ULobbyPlayerEntryWidget`은 현재 별도 에셋 없는 순수 C++ 위젯으로 임시 구현됨(테스트 목적). 최종적으로는 WBP(Widget Blueprint) 에셋으로 교체할 예정 — 교체 시점·방식(C++ 베이스 클래스 유지 여부 등)은 추후 결정

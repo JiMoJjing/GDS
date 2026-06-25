@@ -28,7 +28,7 @@
 - `ULobbyWidget` — 레디 버튼, 시작 버튼, 전체 플레이어 목록 소유. `AGDSLobbyGameState`의 목록 변경을 구독하고 `PlayerArray`를 기준으로 목록과 시작 버튼 상태를 갱신
 - `ULobbyPlayerEntryWidget` — 하나의 `AGDSPlayerState`를 구독해 플레이어 이름, 방장 여부, 레디 여부를 표시
 
-**관계:** GameMode가 PlayerState의 `bIsRoomOwner`를 설정(서버 권위). PlayerController는 자신의 PlayerState를 통해 레디를 요청한다. LobbyWidget은 GameState의 `PlayerArray`와 각 PlayerState의 상태 변경 델리게이트를 구독해 목록을 표시하고, 방장 클라이언트에서 전원 레디를 판정한다. 델리게이트 발생 전 복제가 끝났을 수 있으므로 UI 바인딩 직후 현재 값을 직접 읽어 최초 상태를 동기화한다.
+**관계:** GameMode가 PlayerState의 `bIsRoomOwner`를 설정(서버 권위). PlayerController는 자신의 PlayerState를 통해 레디를 요청한다. 로컬 PlayerController는 `UWorld::GameStateSetEvent`를 구독하고 로비 GameState가 준비되면 해당 인스턴스를 LobbyWidget 생성 시 주입한다. LobbyWidget은 주입받은 GameState의 `PlayerArray`와 각 PlayerState의 상태 변경 델리게이트를 구독해 목록을 표시하고, 방장 클라이언트에서 전원 레디를 판정한다. 이벤트 등록 전에 GameState가 준비됐을 수 있으므로 등록 직후 현재 GameState도 확인하고, UI 바인딩 직후 현재 값을 직접 읽어 최초 상태를 동기화한다.
 
 ## 4. 데이터 / 실행 흐름
 

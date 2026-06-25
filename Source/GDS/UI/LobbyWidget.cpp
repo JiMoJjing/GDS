@@ -12,6 +12,25 @@
 #include "GDS/GameFramework/GDSPlayerState.h"
 #include "GDS/UI/LobbyPlayerEntryWidget.h"
 
+void ULobbyWidget::InitializeLobbyGameState(AGDSLobbyGameState* InLobbyGameState)
+{
+	if (LobbyGameState == InLobbyGameState)
+	{
+		return;
+	}
+
+	if (IsValid(LobbyGameState))
+	{
+		LobbyGameState->OnPlayerListChanged.RemoveDynamic(this, &ThisClass::RefreshPlayerList);
+	}
+
+	LobbyGameState = InLobbyGameState;
+	if (IsValid(LobbyGameState))
+	{
+		LobbyGameState->OnPlayerListChanged.AddUniqueDynamic(this, &ThisClass::RefreshPlayerList);
+	}
+}
+
 TSharedRef<SWidget> ULobbyWidget::RebuildWidget()
 {
 	if (WidgetTree->RootWidget == nullptr)
@@ -53,29 +72,19 @@ TSharedRef<SWidget> ULobbyWidget::RebuildWidget()
 void ULobbyWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
-	BindGameState();
 	RefreshPlayerList();
 }
 
 void ULobbyWidget::NativeDestruct()
 {
 	UnbindPlayerStates();
-	UnbindGameState();
-	Super::NativeDestruct();
-}
-
-void ULobbyWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
-{
-	Super::NativeTick(MyGeometry, InDeltaTime);
-
-	if (!IsValid(LobbyGameState))
+	if (IsValid(LobbyGameState))
 	{
-		BindGameState();
-		if (IsValid(LobbyGameState))
-		{
-			RefreshPlayerList();
-		}
+		LobbyGameState->OnPlayerListChanged.RemoveDynamic(this, &ThisClass::RefreshPlayerList);
 	}
+
+	LobbyGameState = nullptr;
+	Super::NativeDestruct();
 }
 
 void ULobbyWidget::RefreshPlayerList()
@@ -88,11 +97,6 @@ void ULobbyWidget::RefreshPlayerList()
 	}
 
 	PlayerListBox->ClearChildren();
-	if (!IsValid(LobbyGameState))
-	{
-		BindGameState();
-	}
-
 	if (!IsValid(LobbyGameState))
 	{
 		RefreshButtons();
@@ -151,34 +155,6 @@ void ULobbyWidget::HandleStartClicked()
 	{
 		PlayerController->RequestStartGame();
 	}
-}
-
-void ULobbyWidget::BindGameState()
-{
-	AGDSLobbyGameState* NewLobbyGameState = GetWorld() != nullptr
-		? GetWorld()->GetGameState<AGDSLobbyGameState>()
-		: nullptr;
-	if (LobbyGameState == NewLobbyGameState)
-	{
-		return;
-	}
-
-	UnbindGameState();
-	LobbyGameState = NewLobbyGameState;
-	if (IsValid(LobbyGameState))
-	{
-		LobbyGameState->OnPlayerListChanged.AddUniqueDynamic(this, &ThisClass::RefreshPlayerList);
-	}
-}
-
-void ULobbyWidget::UnbindGameState()
-{
-	if (IsValid(LobbyGameState))
-	{
-		LobbyGameState->OnPlayerListChanged.RemoveDynamic(this, &ThisClass::RefreshPlayerList);
-	}
-
-	LobbyGameState = nullptr;
 }
 
 void ULobbyWidget::UnbindPlayerStates()

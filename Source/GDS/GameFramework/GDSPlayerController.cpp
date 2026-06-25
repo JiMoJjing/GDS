@@ -7,6 +7,7 @@
 #include "GDS/GameFramework/GDSLobbyGameState.h"
 #include "GDS/GameFramework/GDSPlayerState.h"
 #include "GDS/UI/LobbyWidget.h"
+#include "Engine/World.h"
 
 void AGDSPlayerController::RequestSetReady(bool bNewReady)
 {
@@ -21,29 +22,83 @@ void AGDSPlayerController::RequestStartGame()
 void AGDSPlayerController::BeginPlayingState()
 {
 	Super::BeginPlayingState();
-	TryCreateLobbyWidget();
+	RegisterGameStateSetEvent();
 }
 
-void AGDSPlayerController::OnRep_PlayerState()
+void AGDSPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	Super::OnRep_PlayerState();
-	TryCreateLobbyWidget();
+	UnregisterGameStateSetEvent();
+	RemoveLobbyWidget();
+	Super::EndPlay(EndPlayReason);
+}
+
+void AGDSPlayerController::PostSeamlessTravel()
+{
+	Super::PostSeamlessTravel();
+	RegisterGameStateSetEvent();
 }
 
 void AGDSPlayerController::PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel)
 {
+	UnregisterGameStateSetEvent();
 	RemoveLobbyWidget();
 	Super::PreClientTravel(PendingURL, TravelType, bIsSeamlessTravel);
 }
 
-void AGDSPlayerController::TryCreateLobbyWidget()
+void AGDSPlayerController::RegisterGameStateSetEvent()
 {
-	if (!IsLocalController() || IsValid(LobbyWidget))
+	if (!IsLocalController())
 	{
 		return;
 	}
 
-	if (!IsValid(GetWorld()) || !GetWorld()->GetMapName().EndsWith(TEXT("Lobby")))
+	UWorld* World = GetWorld();
+	if (!IsValid(World))
+	{
+		return;
+	}
+
+	if (GameStateSetDelegateHandle.IsValid() && GameStateEventWorld.Get() == World)
+	{
+		HandleGameStateSet(World->GetGameState());
+		return;
+	}
+
+	UnregisterGameStateSetEvent();
+	GameStateEventWorld = World;
+	GameStateSetDelegateHandle = World->GameStateSetEvent.AddUObject(
+		this,
+		&ThisClass::HandleGameStateSet);
+	HandleGameStateSet(World->GetGameState());
+}
+
+void AGDSPlayerController::UnregisterGameStateSetEvent()
+{
+	UWorld* BoundWorld = GameStateEventWorld.Get();
+	if (IsValid(BoundWorld) && GameStateSetDelegateHandle.IsValid())
+	{
+		BoundWorld->GameStateSetEvent.Remove(GameStateSetDelegateHandle);
+	}
+
+	GameStateSetDelegateHandle.Reset();
+	GameStateEventWorld.Reset();
+}
+
+void AGDSPlayerController::HandleGameStateSet(AGameStateBase* GameState)
+{
+	AGDSLobbyGameState* LobbyGameState = Cast<AGDSLobbyGameState>(GameState);
+	if (IsValid(LobbyGameState))
+	{
+		TryCreateLobbyWidget(LobbyGameState);
+		return;
+	}
+
+	RemoveLobbyWidget();
+}
+
+void AGDSPlayerController::TryCreateLobbyWidget(AGDSLobbyGameState* LobbyGameState)
+{
+	if (!IsLocalController() || IsValid(LobbyWidget) || !IsValid(LobbyGameState))
 	{
 		return;
 	}
@@ -54,6 +109,7 @@ void AGDSPlayerController::TryCreateLobbyWidget()
 		return;
 	}
 
+	LobbyWidget->InitializeLobbyGameState(LobbyGameState);
 	LobbyWidget->AddToViewport();
 	bShowMouseCursor = true;
 	SetInputMode(FInputModeUIOnly());

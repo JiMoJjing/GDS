@@ -17,11 +17,13 @@ class GDS_API ULobbyWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
+public:
+	void InitializeLobbyGameState(AGDSLobbyGameState* InLobbyGameState);
+
 protected:
 	virtual TSharedRef<SWidget> RebuildWidget() override;
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
-	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 private:
 	UPROPERTY(Transient)
@@ -54,8 +56,6 @@ private:
 	UFUNCTION()
 	void HandleStartClicked();
 
-	void BindGameState();
-	void UnbindGameState();
 	void UnbindPlayerStates();
 	void RefreshButtons();
 	bool AreAllPlayersReady() const;

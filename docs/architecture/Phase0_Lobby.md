@@ -24,7 +24,7 @@
 - `AGDSMainGameState` — 뼈대 (Phase 5에서 웨이브 상태로 채워질 자리)
 - `AGDSPlayerState` — `bIsRoomOwner`, `bIsReady` (둘 다 복제 + `OnRep_`). 각 `OnRep_`에서 상태 변경 델리게이트를 발생시킴. Seamless Travel에 보존됨
 - `AGDSPlayerController` — 레디 토글 요청(`ServerSetReady` 송신), 시작 요청(`ServerRequestStart` 송신), 로컬에서 GameState 준비 감지와 LobbyWidget 생성·제거 담당. Seamless Travel에 보존됨
-- `AGDSCharacter` — 로비·게임플레이 공용 스폰, 전환 시 재스폰. 이동은 Phase 0 범위에서 제외
+- `AGDSCharacter` — 로비·게임플레이 공용 스폰, 전환 시 재스폰. Phase 0 검증용으로 WASD 평면 이동과 마우스 Yaw/Pitch 회전만 제공
 - `ULobbyWidget` — 레디 버튼, 시작 버튼, 전체 플레이어 목록 소유. `AGDSLobbyGameState`의 목록 변경을 구독하고 `PlayerArray`를 기준으로 목록과 시작 버튼 상태를 갱신
 - `ULobbyPlayerEntryWidget` — 하나의 `AGDSPlayerState`를 구독해 `PlayerName`·`PlayerId`, 방장 여부, 레디 여부를 표시
 
@@ -58,14 +58,15 @@
 - `PlayerState` 포인터를 UI 행의 내부 식별자로 사용한다. 표시는 기본 복제되는 `PlayerName`과 `PlayerId`를 함께 사용하며, 상태 변경 델리게이트에 별도 식별 데이터를 복제하거나 복사하지 않는다.
 - LobbyWidget은 `GameState::PlayerArray`의 실제 PlayerState 값을 읽어 시작 버튼을 판정한다. 조건은 로컬 PlayerState가 방장이고, 목록이 비어 있지 않으며, 방장을 포함한 모든 PlayerState가 레디인 경우다.
 - LobbyWidget은 GameState를 매 프레임 탐색하지 않는다. PlayerController가 `UWorld::GameStateSetEvent`로 준비를 감지해 주입하며, Travel·`EndPlay`에서 이벤트 구독과 위젯을 정리한다.
+- Phase 0 캐릭터 입력은 C++에서 생성한 임시 Enhanced Input Mapping Context로 WASD와 `Mouse2D`만 바인딩한다. 에셋 기반 입력 구성과 어빌리티 활성 바인딩은 Phase 2에서 별도로 설계하며, 이 임시 입력 구조를 확장하지 않는다.
 - Seamless Travel 사용 시 `GameMode::bUseSeamlessTravel = true` 설정이 필요하며, 전환 후 `AGDSMainGameMode` 쪽 초기화 순서가 "PlayerState/Controller가 이미 보존되어 있다"는 전제를 깨지 않아야 한다. (Phase 1에서 ASC 초기화 타이밍과의 상호작용 재점검 필요 — 9항 참조.)
 
 ## 7. 구현 지시 (Codex용)
 
-### P0 — DS + 클라 2 접속, 코어 프레임워크 뼈대, Character 스폰 확인
-- **만들 것 (순서):** 1) 프로젝트 모듈 + `LogGDS` 카테고리 → 2) Dedicated Server 타깃 → 3) `AGDSLobbyGameMode`/`AGDSLobbyGameState`, `AGDSMainGameMode`/`AGDSMainGameState` 뼈대 클래스 → 4) `AGDSPlayerState`(`bIsRoomOwner`, `bIsReady` 선언 + 복제 등록 + `OnRep_` 빈 구현) → 5) `AGDSPlayerController` 뼈대 → 6) `AGDSCharacter`(이동 없는 기본 폰) → 7) `/Game/Levels/Lobby`, `/Game/Levels/Main` 맵과 GameMode 연결
+### P0 — DS + 클라 2 접속, 코어 프레임워크 뼈대, Character 스폰/이동 확인
+- **만들 것 (순서):** 1) 프로젝트 모듈 + `LogGDS` 카테고리 → 2) Dedicated Server 타깃 → 3) `AGDSLobbyGameMode`/`AGDSLobbyGameState`, `AGDSMainGameMode`/`AGDSMainGameState` 뼈대 클래스 → 4) `AGDSPlayerState`(`bIsRoomOwner`, `bIsReady` 선언 + 복제 등록 + `OnRep_` 빈 구현) → 5) `AGDSPlayerController` 뼈대 → 6) `AGDSCharacter`(WASD 이동 + 마우스 회전만 제공하는 기본 폰) → 7) `/Game/Levels/Lobby`, `/Game/Levels/Main` 맵과 GameMode 연결
 - **멈춤 지점:** 여기까지 하고 멈춰 보고한다.
-- **통과 기준 (사람 확인):** 컴파일 통과 + PIE에서 DS 1 + 클라 2 접속 + 각 클라에서 `AGDSCharacter` 스폰 확인
+- **통과 기준 (사람 확인):** 컴파일 통과 + PIE에서 DS 1 + 클라 2 접속 + 각 클라에서 `AGDSCharacter` 스폰 확인 + WASD 이동과 마우스 회전 입력이 동작하고 이동이 서버 및 다른 클라이언트에 반영되는지 확인
 
 ### P1 — 로비 흐름 전체(레디 → 시작 → Seamless Travel) + 방장 승계
 - **만들 것 (순서):** 1) `PostLogin` 방장 지정 + 접속 순서 배열 관리 → 2) `ServerSetReady` RPC + validation + PlayerState 상태 변경 델리게이트 → 3) GameState의 플레이어 목록 변경 델리게이트 → 4) LobbyWidget/PlayerEntryWidget과 레디·시작·전체 플레이어 상태 목록 → 5) 방장 클라의 전원 레디 재평가 + 로컬 시작 버튼 활성화 → 6) `ServerRequestStart` RPC + 서버 재검증(방장 여부 + 전원 레디) → 7) 통과 시 Seamless Travel로 `/Game/Levels/Main` 이동(`bUseSeamlessTravel = true`) → 8) `Logout`에서 방장 이탈 감지 + 접속 순서상 가장 앞선 유효 플레이어에게 승계(`bIsReady` 유지)
@@ -75,6 +76,7 @@
 ## 8. 시스템 인수 검증 (전체)
 
 - **결과:** 2026-06-25 통과. DS 1 + 클라 2 PIE에서 레디 동기화, 방장 전용 시작 조건, Seamless Travel 상태 보존, 방장 이탈 승계를 확인함.
+- **추가 확인 필요:** 같은 날 추가한 Phase 0 최소 이동(WASD + 마우스 회전)의 입력 동작과 CharacterMovement 복제는 사람의 PIE 확인이 남아 있음.
 - **시나리오:** DS 1 + 클라 2 PIE → 두 클라 접속 → 방장 자동 지정 확인 → 양쪽 레디 토글 → 방장 시작 버튼 활성화 확인 → 방장이 시작 → Seamless Travel로 메인 레벨 전환 + PlayerState 값 보존 로그 확인 → (별도 케이스) 방장 접속 종료 → 남은 클라가 새 방장으로 승계되고 레디 상태가 유지되는지 확인
 - **서버-클라 검증:** 로그에 `[Server]`/`[Client]` 태그로 방장 지정/레디 변경/시작 검증/Travel 트리거 시점을 모두 남겨, PIE 멀티 인스턴스에서 교차 확인한다.
 - **증명 목표 시연 여부:** 서버 권위(방장 지정·시작 검증), RPC 구조(Server RPC + validation), 복제(OnRep 기반 상태 동기화)를 시연한다. `ReplicationCondition`/Lag Compensation 등은 이 시스템 스코프가 아니다(Phase 4/이후).

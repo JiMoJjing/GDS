@@ -6,11 +6,27 @@
 #include "GameFramework/GameModeBase.h"
 #include "GDSLobbyGameMode.generated.h"
 
-UCLASS()
+class AGDSPlayerController;
+
+UCLASS(Config = Game)
 class GDS_API AGDSLobbyGameMode : public AGameModeBase
 {
 	GENERATED_BODY()
 
 public:
 	AGDSLobbyGameMode();
+
+	virtual void PostLogin(APlayerController* NewPlayer) override;
+	virtual void Logout(AController* Exiting) override;
+
+	void HandleStartRequest(AGDSPlayerController* RequestingController);
+
+private:
+	UPROPERTY(Config)
+	FString MainMapPath;
+
+	TArray<TWeakObjectPtr<AGDSPlayerController>> ConnectedPlayers;
+
+	bool AreAllPlayersReady() const;
+	void RemoveInvalidPlayers();
 };

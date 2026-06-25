@@ -53,7 +53,7 @@
 
 - `bIsRoomOwner`/`bIsReady` 둘 다 `OnRep_` 콜백을 가져야 한다. 생성자/`BeginPlay`에서 복제값을 기다리지 않는다(`constraints.md` 3항).
 - `ServerSetReady`는 호출자 자신의 PlayerState만 변경 가능하도록 서버에서 검증한다.
-- `PlayerState`의 포인터를 UI 행의 내부 식별자로 사용한다. 표시 이름은 기본 복제되는 `PlayerName`을 사용하며, 상태 변경 델리게이트에 별도 식별 데이터를 복제하거나 복사하지 않는다.
+- `PlayerState`의 포인터를 UI 행의 내부 식별자로 사용한다. 표시는 기본 복제되는 `PlayerName`과 `PlayerId`를 함께 사용하며, 상태 변경 델리게이트에 별도 식별 데이터를 복제하거나 복사하지 않는다.
 - LobbyWidget은 델리게이트가 아닌 `GameState::PlayerArray`의 실제 PlayerState 값을 읽어 시작 버튼을 판정한다. 조건은 로컬 PlayerState가 방장이고, 목록이 비어 있지 않으며, 방장을 포함한 모든 PlayerState가 레디인 경우다.
 - Seamless Travel 사용 시 `GameMode::bUseSeamlessTravel = true` 설정이 필요하며, 전환 후 `AGDSMainGameMode` 쪽 초기화 순서가 "PlayerState/Controller가 이미 보존되어 있다"는 전제를 깨지 않아야 한다. (Phase 1에서 ASC 초기화 타이밍과의 상호작용 재점검 필요 — 9항 참조.)
 

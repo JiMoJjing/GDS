@@ -6,6 +6,8 @@
 #include "GameFramework/PlayerState.h"
 #include "GDSPlayerState.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGDSPlayerStateChangedSignature);
+
 UCLASS()
 class GDS_API AGDSPlayerState : public APlayerState
 {
@@ -13,11 +15,24 @@ class GDS_API AGDSPlayerState : public APlayerState
 
 public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void OnRep_PlayerName() override;
 
 	bool IsRoomOwner() const;
 	bool IsReady() const;
 
+	UPROPERTY(BlueprintAssignable)
+	FGDSPlayerStateChangedSignature OnIdentityChanged;
+
+	UPROPERTY(BlueprintAssignable)
+	FGDSPlayerStateChangedSignature OnRoomOwnerChanged;
+
+	UPROPERTY(BlueprintAssignable)
+	FGDSPlayerStateChangedSignature OnReadyChanged;
+
 private:
+	friend class AGDSLobbyGameMode;
+	friend class AGDSPlayerController;
+
 	UPROPERTY(ReplicatedUsing = OnRep_IsRoomOwner)
 	bool bIsRoomOwner = false;
 
@@ -29,4 +44,7 @@ private:
 
 	UFUNCTION()
 	void OnRep_IsReady();
+
+	void SetRoomOwner(bool bNewRoomOwner);
+	void SetReady(bool bNewReady);
 };

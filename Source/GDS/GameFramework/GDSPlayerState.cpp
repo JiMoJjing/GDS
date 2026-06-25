@@ -2,6 +2,7 @@
 
 #include "GDS/GameFramework/GDSPlayerState.h"
 
+#include "GDS/GDS.h"
 #include "Net/UnrealNetwork.h"
 
 void AGDSPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -10,6 +11,12 @@ void AGDSPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 
 	DOREPLIFETIME_CONDITION(AGDSPlayerState, bIsRoomOwner, COND_None);
 	DOREPLIFETIME_CONDITION(AGDSPlayerState, bIsReady, COND_None);
+}
+
+void AGDSPlayerState::OnRep_PlayerName()
+{
+	Super::OnRep_PlayerName();
+	OnIdentityChanged.Broadcast();
 }
 
 bool AGDSPlayerState::IsRoomOwner() const
@@ -24,8 +31,38 @@ bool AGDSPlayerState::IsReady() const
 
 void AGDSPlayerState::OnRep_IsRoomOwner()
 {
+	UE_LOG(LogGDS, Log, TEXT("[Client] 방장 상태 복제: Player=%s, IsRoomOwner=%s"),
+		*GetPlayerName(),
+		bIsRoomOwner ? TEXT("true") : TEXT("false"));
+	OnRoomOwnerChanged.Broadcast();
 }
 
 void AGDSPlayerState::OnRep_IsReady()
 {
+	UE_LOG(LogGDS, Log, TEXT("[Client] 레디 상태 복제: Player=%s, IsReady=%s"),
+		*GetPlayerName(),
+		bIsReady ? TEXT("true") : TEXT("false"));
+	OnReadyChanged.Broadcast();
+}
+
+void AGDSPlayerState::SetRoomOwner(bool bNewRoomOwner)
+{
+	if (!HasAuthority() || bIsRoomOwner == bNewRoomOwner)
+	{
+		return;
+	}
+
+	bIsRoomOwner = bNewRoomOwner;
+	ForceNetUpdate();
+}
+
+void AGDSPlayerState::SetReady(bool bNewReady)
+{
+	if (!HasAuthority() || bIsReady == bNewReady)
+	{
+		return;
+	}
+
+	bIsReady = bNewReady;
+	ForceNetUpdate();
 }

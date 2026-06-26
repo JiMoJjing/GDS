@@ -17,3 +17,5 @@
 - [2026-06-26] (phase1_gas) Armor 고정감소+cap의 정확한 산식과 Health/Shield/Armor/MovementSpeed 클램프 규칙이 빠져 Attribute 계산 결과가 갈릴 수 있음 — 계산 계약 보강 필요로 기록
 - [2026-06-26] (phase1_gas) ASC 복제 활성화(SetIsReplicated)와 GAS 모듈 의존성 Public/Private 위치가 명시되지 않아 Build/Replication 구현이 흔들릴 수 있음 — 세부 구현 계약 보강 필요로 기록
 - [2026-06-26] (phase1_gas) phase1_gas는 GE 순수 C++를 확정했지만 coding.md에는 GE_ 에셋 관례가 남아 문서 간 계약이 충돌함 — 사람 승인 후 coding.md 보정 필요로 기록
+- [2026-06-26] (phase1_gas) coding.md 보정 후에도 phase1_gas 9항에는 GE 에셋 관례 충돌이 미해결로 남아 문서 상태가 어긋남 — phase1_gas 후속 정리 필요로 기록
+- [2026-06-26] (phase1_gas) GE 수치를 UPROPERTY(Config)로 둔다고 했지만 UCLASS Config 지정과 .ini 섹션 위치가 명시되지 않아 구현 방식이 갈릴 수 있음 — Config 계약 보강 필요로 기록

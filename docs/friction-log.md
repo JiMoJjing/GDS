@@ -16,3 +16,4 @@
 - [2026-06-26] (phase1_gas) 테스트 GE를 BP/DataAsset 인스턴스로 만들라고 했지만 UGameplayEffect 에셋 생성·참조 방식이 구현 관점에서 아직 모호함 — 설계 보강 필요로 기록
 - [2026-06-26] (phase1_gas) Armor 고정감소+cap의 정확한 산식과 Health/Shield/Armor/MovementSpeed 클램프 규칙이 빠져 Attribute 계산 결과가 갈릴 수 있음 — 계산 계약 보강 필요로 기록
 - [2026-06-26] (phase1_gas) ASC 복제 활성화(SetIsReplicated)와 GAS 모듈 의존성 Public/Private 위치가 명시되지 않아 Build/Replication 구현이 흔들릴 수 있음 — 세부 구현 계약 보강 필요로 기록
+- [2026-06-26] (phase1_gas) phase1_gas는 GE 순수 C++를 확정했지만 coding.md에는 GE_ 에셋 관례가 남아 문서 간 계약이 충돌함 — 사람 승인 후 coding.md 보정 필요로 기록

@@ -20,6 +20,8 @@
 - ASC 초기화 타이밍을 지킨다. Pawn/PlayerState 구조에 따라 서버와 클라이언트에서 초기화 지점이 다르다. (`PossessedBy`, `OnRep_PlayerState` 등) — 임의의 위치에서 초기화하지 않는다.
 - Attribute 값 변경은 항상 GameplayEffect를 통한다. 직접 setter로 갈기지 않는다. (Meta Attribute / Execution Calculation 패턴 준수.)
 - GameplayTag는 문자열 하드코딩하지 않는다. 정해진 태그 등록 방식을 따른다.
+- GameplayEffect의 Asset Tag(GE 식별용)는 UE 5.4 기준 `UAssetTagsGameplayEffectComponent`로 설정한다. deprecated 필드를 쓰지 않는다.
+- GameplayEffect 생성자에서 GameplayEffectComponent를 추가할 때 `FindOrAddComponent`를 쓰지 않는다 — 내부적으로 unnamed `NewObject`를 호출해 CDO 생성 시점에 크래시한다. 생성자에서는 항상 이름 있는 `CreateDefaultSubobject`로 컴포넌트를 만들고 `GEComponents`에 직접 등록한다. (근거: phase1_gas P1 구현 중 실제 크래시 발생 — 컴파일은 통과하고 에디터 로드 시점에만 드러남.)
 
 ## 3. 초기화 타이밍
 

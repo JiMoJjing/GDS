@@ -45,7 +45,7 @@
 - **Attribute 클램프 규칙.**
   - `Health`: `[0, MaxHealth]`로 클램프(`PreAttributeChange`/`PostGameplayEffectExecute`에서).
   - `Shield`, `Armor`: 하한 `0`만 클램프. 상한은 지금 별도 Max Attribute가 없어 의미가 없다(증가시키는 GE가 이 Phase에 없음) — 추후 MaxShield/MaxArmor가 필요해지면 그때 추가.
-  - `MovementSpeed`: 하한 **`100`**으로 클램프(내가 정함). 0 또는 음수로 떨어지면 캐릭터가 완전히 멈추거나 Movement/애니메이션이 비정상 동작할 위험이 있어 안전망이 필요하다. `100`은 기본값 `600`의 1/6 수준 — 디버프가 "느려졌다"는 걸 충분히 체감하게 하면서도 완전 정지는 막는 임계값으로 잡았다. 상한은 이 Phase의 버프(`GE_TestSpeedBuff`가 감속만 함)로는 도달할 일이 없어 지금 정하지 않는다.
+  - `MovementSpeed`: 하한 **`100`**으로 클램프(내가 정함). 0 또는 음수로 떨어지면 캐릭터가 완전히 멈추거나 Movement/애니메이션이 비정상 동작할 위험이 있어 안전망이 필요하다. `100`은 기본값 `600`의 1/6 수준 — 디버프가 "느려졌다"는 걸 충분히 체감하게 하면서도 완전 정지는 막는 임계값으로 잡았다. 상한은 이 Phase의 버프(`UGE_TestSpeedBuff`가 감속만 함)로는 도달할 일이 없어 지금 정하지 않는다.
 - **ASC 복제 활성화.** `AGDSPlayerState`에서 ASC를 `CreateDefaultSubobject`한 직후 `SetIsReplicated(true)`를 명시적으로 호출한다. `UAbilitySystemComponent`는 컴포넌트 자체 복제 플래그를 자동으로 켜주지 않으므로, 빠뜨리면 Attribute 자체가 정의돼 있어도 복제가 안 되는 조용한 실패가 난다.
 - **`Build.cs` 모듈 의존성 위치는 `PublicDependencyModuleNames`.** `AGDSPlayerState`/`AGDSCharacter` 헤더가 `UAbilitySystemComponent*`/`UCombatAttributeSet*` 타입을 멤버로 선언해 외부에 노출하므로, 이 타입을 정의하는 `GameplayAbilities`/`GameplayTags`/`GameplayTasks` 모듈은 `Private`이 아니라 `Public`으로 가야 그 헤더를 include하는 다른 모듈에서도 타입이 보인다.
 
@@ -72,7 +72,7 @@
   - **`UGE_TestSpeedBuff`** — MovementSpeed Modifier의 Magnitude는 GE 클래스 자신의 `UPROPERTY(EditDefaultsOnly, Config)` float(`-300`)을 생성자에서 `FScalableFloat`로 사용. 고정값 테스트라 SetByCaller까지는 불필요.
   - 두 경우 모두 매직 넘버는 `UPROPERTY(Config)`로 빼서 `.ini`에 둔다(`constraints.md` 6항) — 이건 텍스트 파일이라 Codex가 직접 쓸 수 있고, 에디터가 필요 없다. `UGE_TestDamage`/`UGE_TestSpeedBuff`는 `UCLASS(Config=Game)`로 선언하고, 검증용 값은 `Config/DefaultGame.ini`의 각 클래스 섹션에 둔다.
   - 탈락 대안: C++ 클래스 + BP 자식 에셋(`GE_TestDamage` 등). → Codex가 만들 수 없는 산출물이 생겨 파이프라인이 끊김. 탈락.
-  - **참고:** `coding.md` 2항 네이밍 표의 "GameplayEffect 에셋(BP/DataAsset) — `GE_`" 행은 이 결정과 충돌한다. 이 프로젝트의 모든 GE가 앞으로도 이 방식(순수 C++)으로 갈 거라면 그 행 자체가 이 프로젝트엔 안 맞는 관례라, `coding.md` 수정이 필요할 수 있다 — 별도로 확인받을 것(9항 참조).
+  - **참고:** `coding.md` 2항이 이 결정과 일치하도록 갱신됨 — "GE는 전부 순수 C++ `UGE_`, BP/DataAsset `GE_` 에셋은 워크플로 자체를 바꾸는 시점에만 도입"으로 명시. 더 이상 충돌 없음.
 
 - **GameplayTag는 Phase 1에서 GE 식별용으로만 쓴다(`Effect.Damage.Test`).** 상태 판정·상호작용을 위한 태그 시스템(Death, 상태이상 등)은 Phase 3 영역이라, 지금 만들면 그 시스템의 축소판을 미리 만들게 되어 나중에 구조가 부딪힌다.
   - **태그 등록 방식은 네이티브 C++ 매크로(`UE_DEFINE_GAMEPLAY_TAG` 계열).** `constraints.md` 6항의 "C++ 우선" 원칙과 일치.
@@ -155,6 +155,7 @@
 
 ## 8. 시스템 인수 검증 (전체)
 
+- **결과:** 2026-06-27 통과. DS 1 + 클라 2 PIE에서 ASC Init/초기 Attribute 복제(P0), Damage 캐스케이드(Shield→Armor→Health) 서버-클라 일치, MovementSpeed 변경 및 MaxWalkSpeed 반영, RPC validation을 확인함(P1).
 - **시나리오:** DS 1 + 클라 2 PIE → 두 클라 접속 → (P0) 서버/양쪽 클라 로그로 ASC Init 호출과 초기 Attribute 복제 일치 확인 → (P1) 한 클라에서 데미지 테스트 키 입력(단발) → Shield→Armor→Health 캐스케이드가 서버/양쪽 클라 로그에서 일치 → 같은 클라에서 데미지 테스트를 누적 입력해 Shield/Armor를 소진시켜 Health까지 깎이는 오버플로 확인 → 속도 테스트 키 입력 → 실제 이동 속도 변화가 PIE 화면에서 보이고 로그 일치 확인.
 - **서버-클라 검증:** 로그에 `[Server]`/`[Client]` 태그로 Init 호출, GE 적용, Attribute before/after, RPC validation 시점을 모두 남겨 PIE 멀티 인스턴스에서 교차 확인한다.
 - **증명 목표 시연 여부:** AttributeSet 설계, GameplayEffect 적용 흐름, ASC Replication Mode(Mixed)와 그 근거, 서버 권위적 GE 적용, RPC 구조(서버 검증)를 시연한다. GameplayTag는 식별용으로만 등장(상태 판정 시스템은 Phase 3). 클라이언트 예측·Relevancy·Dormancy·Lag Compensation·`ReplicationCondition`은 이 시스템 스코프가 아니다(각각 이후 Phase).
@@ -166,6 +167,5 @@
 - Health=0 도달 시 사망 처리(Character 반응 콘텐츠) — Phase 5. 단 연결 채널(Attribute 변경 델리게이트 구독)은 Phase 1에서 이미 마련한 것을 그대로 재사용 — 새 패턴 발명 불필요
 - MovementSpeed Duration형 버프/디버프(상태이상으로서의 속도 변화) — Phase 3
 - GameplayAbility 활성화·Enhanced Input 본 바인딩 — Phase 2. 그 시점에 이 Phase의 임시 디버그 입력·`UGE_TestDamage`/`UGE_TestSpeedBuff` 폐기
-- **`coding.md` 2항의 "GameplayEffect 에셋(BP/DataAsset) — `GE_`" 행이 이 시스템의 "GE는 순수 C++만" 결정과 충돌한다.** 이 프로젝트의 모든 GE가 앞으로도 BP 자식 에셋 없이 갈 거라면 그 행을 빼거나 수정해야 함 — 사람 승인 필요, 임의로 고치지 않음.
 - AI(Phase 5)용 ASC Replication Mode(Minimal일 가능성이 높음, owning client가 없는 구조라서) — Phase 5에서 별도 결정
 - 팀/분대 단위로 Attribute 가시성이 갈리는 경우 — 이 시스템은 전원 공개 복제를 전제로 하며, Phase 4(스캐너/마킹)에서 재검토

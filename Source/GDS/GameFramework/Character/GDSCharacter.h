@@ -50,6 +50,12 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> LookAction;
 
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> TestDamageAction;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> TestSpeedEffectAction;
+
 	void AddPhase0InputMapping();
 	void RemovePhase0InputMapping();
 	void MoveForward(const FInputActionValue& Value);
@@ -57,10 +63,18 @@ private:
 	void MoveRight(const FInputActionValue& Value);
 	void MoveLeft(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
+	void ApplyTestDamage(const FInputActionValue& Value);
+	void ApplyTestSpeedEffect(const FInputActionValue& Value);
 	FVector GetPlanarForwardDirection() const;
 	FVector GetPlanarRightDirection() const;
 	void InitializeAbilitySystem();
 	void BindAttributeChangeDelegates(UAbilitySystemComponent* AbilitySystemComponent);
 	void HandleMovementSpeedChanged(const FOnAttributeChangeData& ChangeData);
 	void ApplyMovementSpeedToCharacter(float NewMovementSpeed);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerApplyTestDamage();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerApplyTestSpeedEffect();
 };

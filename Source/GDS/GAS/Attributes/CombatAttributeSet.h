@@ -12,7 +12,7 @@
 	GAMEPLAYATTRIBUTE_VALUE_SETTER(PropertyName) \
 	GAMEPLAYATTRIBUTE_VALUE_INITTER(PropertyName)
 
-UCLASS()
+UCLASS(Config = Game)
 class GDS_API UCombatAttributeSet : public UAttributeSet
 {
 	GENERATED_BODY()
@@ -51,8 +51,15 @@ public:
 private:
 	static constexpr float MinMovementSpeed = 100.0f;
 
+	UPROPERTY(EditDefaultsOnly, Config, Category = "Combat|Armor")
+	float ArmorFlatDamageReduction = 7.0f;
+
+	UPROPERTY(EditDefaultsOnly, Config, Category = "Combat|Armor")
+	float ArmorDamageReductionCapPercent = 0.5f;
+
 	void ClampAttribute(const FGameplayAttribute& Attribute, float& NewValue) const;
 	void ClampCurrentAttributes();
+	void ExecuteDamageCascade(float RawDamage);
 
 	UFUNCTION()
 	void OnRep_Health(const FGameplayAttributeData& OldHealth);

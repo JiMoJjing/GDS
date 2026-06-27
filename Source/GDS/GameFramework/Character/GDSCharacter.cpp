@@ -7,6 +7,9 @@
 #include "EnhancedInputSubsystems.h"
 #include "GDS/GDS.h"
 #include "GDS/GAS/Attributes/CombatAttributeSet.h"
+#include "GDS/GAS/Effects/GE_TestDamage.h"
+#include "GDS/GAS/Effects/GE_TestSpeedBuff.h"
+#include "GDS/GAS/GDSGameplayTags.h"
 #include "GDS/GameFramework/PlayerState/GDSPlayerState.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "InputAction.h"
@@ -45,6 +48,14 @@ AGDSCharacter::AGDSCharacter()
 	LookAction = CreateDefaultSubobject<UInputAction>(TEXT("LookAction"));
 	LookAction->ValueType = EInputActionValueType::Axis2D;
 	Phase0InputMappingContext->MapKey(LookAction, EKeys::Mouse2D);
+
+	TestDamageAction = CreateDefaultSubobject<UInputAction>(TEXT("TestDamageAction"));
+	TestDamageAction->ValueType = EInputActionValueType::Boolean;
+	Phase0InputMappingContext->MapKey(TestDamageAction, EKeys::One);
+
+	TestSpeedEffectAction = CreateDefaultSubobject<UInputAction>(TEXT("TestSpeedEffectAction"));
+	TestSpeedEffectAction->ValueType = EInputActionValueType::Boolean;
+	Phase0InputMappingContext->MapKey(TestSpeedEffectAction, EKeys::Two);
 }
 
 UAbilitySystemComponent* AGDSCharacter::GetAbilitySystemComponent() const
@@ -101,6 +112,8 @@ void AGDSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	EnhancedInputComponent->BindAction(MoveRightAction, ETriggerEvent::Triggered, this, &ThisClass::MoveRight);
 	EnhancedInputComponent->BindAction(MoveLeftAction, ETriggerEvent::Triggered, this, &ThisClass::MoveLeft);
 	EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ThisClass::Look);
+	EnhancedInputComponent->BindAction(TestDamageAction, ETriggerEvent::Started, this, &ThisClass::ApplyTestDamage);
+	EnhancedInputComponent->BindAction(TestSpeedEffectAction, ETriggerEvent::Started, this, &ThisClass::ApplyTestSpeedEffect);
 }
 
 void AGDSCharacter::UnPossessed()
@@ -175,6 +188,22 @@ void AGDSCharacter::Look(const FInputActionValue& Value)
 	const FVector2D LookAxis = Value.Get<FVector2D>();
 	AddControllerYawInput(LookAxis.X);
 	AddControllerPitchInput(-LookAxis.Y);
+}
+
+void AGDSCharacter::ApplyTestDamage(const FInputActionValue& Value)
+{
+	if (Value.Get<bool>())
+	{
+		ServerApplyTestDamage();
+	}
+}
+
+void AGDSCharacter::ApplyTestSpeedEffect(const FInputActionValue& Value)
+{
+	if (Value.Get<bool>())
+	{
+		ServerApplyTestSpeedEffect();
+	}
 }
 
 FVector AGDSCharacter::GetPlanarForwardDirection() const
@@ -260,4 +289,102 @@ void AGDSCharacter::ApplyMovementSpeedToCharacter(float NewMovementSpeed)
 		NetContext,
 		OldMaxWalkSpeed,
 		MovementComponent->MaxWalkSpeed);
+}
+
+bool AGDSCharacter::ServerApplyTestDamage_Validate()
+{
+	const bool bValid = IsValid(GetAbilitySystemComponent());
+	UE_LOG(LogGDS, Log, TEXT("[Server] RPC Validate: ServerApplyTestDamage=%s"), bValid ? TEXT("pass") : TEXT("reject"));
+	return bValid;
+}
+
+void AGDSCharacter::ServerApplyTestDamage_Implementation()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
+	const AGDSPlayerState* GDSPlayerState = GetPlayerState<AGDSPlayerState>();
+	const UCombatAttributeSet* CombatAttributeSet = IsValid(GDSPlayerState) ? GDSPlayerState->GetCombatAttributeSet() : nullptr;
+	if (!IsValid(AbilitySystemComponent) || !IsValid(CombatAttributeSet))
+	{
+		return;
+	}
+
+	const float OldShield = CombatAttributeSet->GetShield();
+	const float OldArmor = CombatAttributeSet->GetArmor();
+	const float OldHealth = CombatAttributeSet->GetHealth();
+
+	FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
+	EffectContext.AddSourceObject(this);
+
+	FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(UGE_TestDamage::StaticClass(), 1.0f, EffectContext);
+	if (!SpecHandle.IsValid())
+	{
+		UE_LOG(LogGDS, Warning, TEXT("[Server] UGE_TestDamage Spec creation failed"));
+		return;
+	}
+
+	const UGE_TestDamage* TestDamageEffect = GetDefault<UGE_TestDamage>();
+	const float TestDamage = IsValid(TestDamageEffect) ? TestDamageEffect->GetTestDamage() : 0.0f;
+	SpecHandle.Data->SetSetByCallerMagnitude(TAG_Data_Damage_Test, TestDamage);
+
+	AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+
+	UE_LOG(LogGDS, Log,
+		TEXT("[Server] UGE_TestDamage Applied: Damage=%.1f, Shield %.1f -> %.1f, Armor %.1f -> %.1f, Health %.1f -> %.1f"),
+		TestDamage,
+		OldShield,
+		CombatAttributeSet->GetShield(),
+		OldArmor,
+		CombatAttributeSet->GetArmor(),
+		OldHealth,
+		CombatAttributeSet->GetHealth());
+}
+
+bool AGDSCharacter::ServerApplyTestSpeedEffect_Validate()
+{
+	const bool bValid = IsValid(GetAbilitySystemComponent());
+	UE_LOG(LogGDS, Log, TEXT("[Server] RPC Validate: ServerApplyTestSpeedEffect=%s"), bValid ? TEXT("pass") : TEXT("reject"));
+	return bValid;
+}
+
+void AGDSCharacter::ServerApplyTestSpeedEffect_Implementation()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
+	const AGDSPlayerState* GDSPlayerState = GetPlayerState<AGDSPlayerState>();
+	const UCombatAttributeSet* CombatAttributeSet = IsValid(GDSPlayerState) ? GDSPlayerState->GetCombatAttributeSet() : nullptr;
+	if (!IsValid(AbilitySystemComponent) || !IsValid(CombatAttributeSet))
+	{
+		return;
+	}
+
+	const float OldMovementSpeed = CombatAttributeSet->GetMovementSpeed();
+
+	FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
+	EffectContext.AddSourceObject(this);
+
+	FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(UGE_TestSpeedBuff::StaticClass(), 1.0f, EffectContext);
+	if (!SpecHandle.IsValid())
+	{
+		UE_LOG(LogGDS, Warning, TEXT("[Server] UGE_TestSpeedBuff Spec creation failed"));
+		return;
+	}
+
+	AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+
+	const UGE_TestSpeedBuff* TestSpeedEffect = GetDefault<UGE_TestSpeedBuff>();
+	const float MovementSpeedDelta = IsValid(TestSpeedEffect) ? TestSpeedEffect->GetMovementSpeedDelta() : 0.0f;
+
+	UE_LOG(LogGDS, Log, TEXT("[Server] UGE_TestSpeedBuff Applied: Delta=%.1f, MovementSpeed %.1f -> %.1f"),
+		MovementSpeedDelta,
+		OldMovementSpeed,
+		CombatAttributeSet->GetMovementSpeed());
 }

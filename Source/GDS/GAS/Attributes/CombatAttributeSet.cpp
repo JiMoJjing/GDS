@@ -36,6 +36,12 @@ void UCombatAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute
 void UCombatAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
 {
 	Super::PostGameplayEffectExecute(Data);
+
+	if (Data.EvaluatedData.Attribute == GetDamageAttribute())
+	{
+		ExecuteDamageCascade(GetDamage());
+	}
+
 	ClampCurrentAttributes();
 }
 
@@ -66,6 +72,50 @@ void UCombatAttributeSet::ClampCurrentAttributes()
 	SetShield(FMath::Max(0.0f, GetShield()));
 	SetArmor(FMath::Max(0.0f, GetArmor()));
 	SetMovementSpeed(FMath::Max(MinMovementSpeed, GetMovementSpeed()));
+}
+
+void UCombatAttributeSet::ExecuteDamageCascade(float RawDamage)
+{
+	const float OldShield = GetShield();
+	const float OldArmor = GetArmor();
+	const float OldHealth = GetHealth();
+
+	float RemainingDamage = FMath::Max(0.0f, RawDamage);
+	if (RemainingDamage > 0.0f)
+	{
+		const float ShieldAbsorbed = FMath::Min(GetShield(), RemainingDamage);
+		SetShield(GetShield() - ShieldAbsorbed);
+		RemainingDamage -= ShieldAbsorbed;
+	}
+
+	float ArmorReduction = 0.0f;
+	if (RemainingDamage > 0.0f)
+	{
+		const float ClampedReductionCap = FMath::Clamp(ArmorDamageReductionCapPercent, 0.0f, 1.0f);
+		ArmorReduction = FMath::Min(ArmorFlatDamageReduction, RemainingDamage * ClampedReductionCap);
+		const float EffectiveDamage = RemainingDamage - ArmorReduction;
+		const float ArmorAbsorbed = FMath::Min(GetArmor(), EffectiveDamage);
+		SetArmor(GetArmor() - ArmorAbsorbed);
+		RemainingDamage = EffectiveDamage - ArmorAbsorbed;
+	}
+
+	if (RemainingDamage > 0.0f)
+	{
+		SetHealth(GetHealth() - RemainingDamage);
+	}
+
+	SetDamage(0.0f);
+
+	UE_LOG(LogGDS, Log,
+		TEXT("[Server] Damage Cascade: Raw=%.1f, ArmorReduction=%.1f, Shield %.1f -> %.1f, Armor %.1f -> %.1f, Health %.1f -> %.1f"),
+		RawDamage,
+		ArmorReduction,
+		OldShield,
+		GetShield(),
+		OldArmor,
+		GetArmor(),
+		OldHealth,
+		GetHealth());
 }
 
 void UCombatAttributeSet::OnRep_Health(const FGameplayAttributeData& OldHealth)

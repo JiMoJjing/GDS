@@ -264,6 +264,11 @@ void AGDSCharacter::BindAttributeChangeDelegates(UAbilitySystemComponent* Abilit
 
 void AGDSCharacter::HandleMovementSpeedChanged(const FOnAttributeChangeData& ChangeData)
 {
+	if (FMath::IsNearlyEqual(ChangeData.OldValue, ChangeData.NewValue))
+	{
+		return;
+	}
+
 	ApplyMovementSpeedToCharacter(ChangeData.NewValue);
 
 	const TCHAR* NetContext = HasAuthority() ? TEXT("Server") : TEXT("Client");

@@ -8,14 +8,8 @@
 
 ---
 
-- [2026-06-26] (phase1_gas) GAS Build.cs 모듈 의존성(GameplayAbilities/GameplayTags/GameplayTasks)이 문서에 빠져 구현 첫 단계가 모호함 — 설계 보강 필요로 기록
-- [2026-06-26] (phase1_gas) PlayerState ASC 소유만 있고 IAbilitySystemInterface 구현 여부가 명시되지 않아 이후 접근 계약이 흔들릴 수 있음 — 설계 보강 필요로 기록
-- [2026-06-26] (phase1_gas) Attribute 초기값과 테스트 GE 수치가 추후 튜닝으로만 남아 P0/P1 검증값을 정할 근거가 부족함 — 검증용 임시값 명시 필요로 기록
-- [2026-06-26] (phase1_gas) Phase 0 임시 입력은 Character에 있는데 문서는 PlayerController 입력 바인딩처럼 읽혀 구현 위치 해석이 갈림 — Character 입력 확장/RPC 송신 책임 분리 명시 필요로 기록
-- [2026-06-26] (phase1_gas) Armor 튜닝값 저장 방식, GAS Attribute 복제 매크로 패턴, 델리게이트 중복 구독 방지, 테스트 GE의 C++/에셋 형태가 덜 명확함 — 세부 구현 계약 보강 필요로 기록
-- [2026-06-26] (phase1_gas) 테스트 GE를 BP/DataAsset 인스턴스로 만들라고 했지만 UGameplayEffect 에셋 생성·참조 방식이 구현 관점에서 아직 모호함 — 설계 보강 필요로 기록
-- [2026-06-26] (phase1_gas) Armor 고정감소+cap의 정확한 산식과 Health/Shield/Armor/MovementSpeed 클램프 규칙이 빠져 Attribute 계산 결과가 갈릴 수 있음 — 계산 계약 보강 필요로 기록
-- [2026-06-26] (phase1_gas) ASC 복제 활성화(SetIsReplicated)와 GAS 모듈 의존성 Public/Private 위치가 명시되지 않아 Build/Replication 구현이 흔들릴 수 있음 — 세부 구현 계약 보강 필요로 기록
-- [2026-06-26] (phase1_gas) phase1_gas는 GE 순수 C++를 확정했지만 coding.md에는 GE_ 에셋 관례가 남아 문서 간 계약이 충돌함 — 사람 승인 후 coding.md 보정 필요로 기록
-- [2026-06-26] (phase1_gas) coding.md 보정 후에도 phase1_gas 9항에는 GE 에셋 관례 충돌이 미해결로 남아 문서 상태가 어긋남 — phase1_gas 후속 정리 필요로 기록
-- [2026-06-26] (phase1_gas) GE 수치를 UPROPERTY(Config)로 둔다고 했지만 UCLASS Config 지정과 .ini 섹션 위치가 명시되지 않아 구현 방식이 갈릴 수 있음 — Config 계약 보강 필요로 기록
+- [2026-06-27] (phase1_gas/P0) Build.cs에 GameplayAbilities 모듈을 추가한 뒤 UBT가 uproject 플러그인 의존성 누락 경고를 냄 — GDS.uproject에 GameplayAbilities 플러그인을 명시해 경고 없는 빌드로 정리
+- [2026-06-27] (phase1_gas/P1) UE 5.4의 GameplayEffect Asset Tag 설정이 deprecated 필드와 컴포넌트 방식 사이에서 헷갈리기 쉬웠음 — UAssetTagsGameplayEffectComponent 경로로 맞추고 deprecated 필드는 사용하지 않음
+- [2026-06-27] (phase1_gas/P1) UGameplayEffect 생성자 안에서 FindOrAddComponent가 NewObject(NAME_None)를 호출해 에디터 CDO 생성 시 fatal crash 발생 — 이름 있는 CreateDefaultSubobject로 컴포넌트를 만들고 GEComponents에 등록하도록 수정
+- [2026-06-27] (phase1_gas/P1) GDSEditor 빌드는 통과했지만 GE 컴포넌트 생성자 크래시는 에디터 로드 시점에만 드러남 — 이후 GE 컴포넌트 생성 변경은 빌드 외에 에디터 로드/PIE 확인까지 필요함으로 기록
+- [2026-06-27] (phase1_gas/P1) Instant MovementSpeed GE 적용 뒤 클램프/재평가 경로에서 같은 값(300→300) delegate 로그가 한 번 더 찍혀 검증 로그가 흐려짐 — OldValue와 NewValue가 같으면 MovementSpeed delegate 처리를 생략하도록 정리

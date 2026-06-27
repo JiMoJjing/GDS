@@ -5,6 +5,8 @@
 #include "GameplayEffect.h"
 #include "GE_TestDamage.generated.h"
 
+class UAssetTagsGameplayEffectComponent;
+
 UCLASS(Config = Game)
 class GDS_API UGE_TestDamage : public UGameplayEffect
 {
@@ -18,6 +20,9 @@ public:
 	float GetTestDamage() const;
 
 private:
+	UPROPERTY()
+	TObjectPtr<UAssetTagsGameplayEffectComponent> AssetTagsComponent;
+
 	UPROPERTY(EditDefaultsOnly, Config, Category = "Test")
 	float TestDamage = 40.0f;
 

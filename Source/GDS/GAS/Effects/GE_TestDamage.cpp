@@ -8,6 +8,9 @@
 
 UGE_TestDamage::UGE_TestDamage()
 {
+	AssetTagsComponent = CreateDefaultSubobject<UAssetTagsGameplayEffectComponent>(TEXT("AssetTagsComponent"));
+	GEComponents.Add(AssetTagsComponent);
+
 	RebuildModifiers();
 }
 
@@ -38,5 +41,5 @@ void UGE_TestDamage::RebuildModifiers()
 
 	FInheritedTagContainer AssetTags;
 	AssetTags.AddTag(TAG_Effect_Damage_Test);
-	FindOrAddComponent<UAssetTagsGameplayEffectComponent>().SetAndApplyAssetTagChanges(AssetTags);
+	AssetTagsComponent->SetAndApplyAssetTagChanges(AssetTags);
 }

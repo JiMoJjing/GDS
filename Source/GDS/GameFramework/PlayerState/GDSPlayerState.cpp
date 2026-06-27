@@ -2,8 +2,19 @@
 
 #include "GDS/GameFramework/PlayerState/GDSPlayerState.h"
 
+#include "AbilitySystemComponent.h"
 #include "GDS/GDS.h"
+#include "GDS/GAS/Attributes/CombatAttributeSet.h"
 #include "Net/UnrealNetwork.h"
+
+AGDSPlayerState::AGDSPlayerState()
+{
+	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
+	AbilitySystemComponent->SetIsReplicated(true);
+	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+
+	CombatAttributeSet = CreateDefaultSubobject<UCombatAttributeSet>(TEXT("CombatAttributeSet"));
+}
 
 void AGDSPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -19,6 +30,11 @@ void AGDSPlayerState::OnRep_PlayerName()
 	OnIdentityChanged.Broadcast();
 }
 
+UAbilitySystemComponent* AGDSPlayerState::GetAbilitySystemComponent() const
+{
+	return AbilitySystemComponent;
+}
+
 bool AGDSPlayerState::IsRoomOwner() const
 {
 	return bIsRoomOwner;
@@ -27,6 +43,11 @@ bool AGDSPlayerState::IsRoomOwner() const
 bool AGDSPlayerState::IsReady() const
 {
 	return bIsReady;
+}
+
+UCombatAttributeSet* AGDSPlayerState::GetCombatAttributeSet() const
+{
+	return CombatAttributeSet;
 }
 
 void AGDSPlayerState::OnRep_IsRoomOwner()

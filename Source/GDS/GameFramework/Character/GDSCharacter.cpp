@@ -2,9 +2,12 @@
 
 #include "GDS/GameFramework/Character/GDSCharacter.h"
 
+#include "AbilitySystemComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "GDS/GDS.h"
+#include "GDS/GAS/Attributes/CombatAttributeSet.h"
+#include "GDS/GameFramework/PlayerState/GDSPlayerState.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "InputAction.h"
 #include "InputActionValue.h"
@@ -44,6 +47,12 @@ AGDSCharacter::AGDSCharacter()
 	Phase0InputMappingContext->MapKey(LookAction, EKeys::Mouse2D);
 }
 
+UAbilitySystemComponent* AGDSCharacter::GetAbilitySystemComponent() const
+{
+	const AGDSPlayerState* GDSPlayerState = GetPlayerState<AGDSPlayerState>();
+	return IsValid(GDSPlayerState) ? GDSPlayerState->GetAbilitySystemComponent() : nullptr;
+}
+
 void AGDSCharacter::BeginPlay()
 {
 	Super::BeginPlay();
@@ -56,6 +65,18 @@ void AGDSCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	RemovePhase0InputMapping();
 	Super::EndPlay(EndPlayReason);
+}
+
+void AGDSCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	InitializeAbilitySystem();
+}
+
+void AGDSCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+	InitializeAbilitySystem();
 }
 
 void AGDSCharacter::PawnClientRestart()
@@ -166,4 +187,77 @@ FVector AGDSCharacter::GetPlanarRightDirection() const
 {
 	const FRotator ControlRotation = Controller != nullptr ? Controller->GetControlRotation() : GetActorRotation();
 	return FRotationMatrix(FRotator(0.0f, ControlRotation.Yaw, 0.0f)).GetUnitAxis(EAxis::Y);
+}
+
+void AGDSCharacter::InitializeAbilitySystem()
+{
+	AGDSPlayerState* GDSPlayerState = GetPlayerState<AGDSPlayerState>();
+	if (!IsValid(GDSPlayerState))
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* AbilitySystemComponent = GDSPlayerState->GetAbilitySystemComponent();
+	const UCombatAttributeSet* CombatAttributeSet = GDSPlayerState->GetCombatAttributeSet();
+	if (!IsValid(AbilitySystemComponent) || !IsValid(CombatAttributeSet))
+	{
+		return;
+	}
+
+	AbilitySystemComponent->InitAbilityActorInfo(GDSPlayerState, this);
+	BindAttributeChangeDelegates(AbilitySystemComponent);
+	ApplyMovementSpeedToCharacter(CombatAttributeSet->GetMovementSpeed());
+
+	const TCHAR* NetContext = HasAuthority() ? TEXT("Server") : TEXT("Client");
+	UE_LOG(LogGDS, Log,
+		TEXT("[%s] ASC Init: Owner=%s, Avatar=%s, Health=%.1f, MaxHealth=%.1f, Shield=%.1f, Armor=%.1f, MovementSpeed=%.1f, Damage=%.1f"),
+		NetContext,
+		*GetNameSafe(GDSPlayerState),
+		*GetNameSafe(this),
+		CombatAttributeSet->GetHealth(),
+		CombatAttributeSet->GetMaxHealth(),
+		CombatAttributeSet->GetShield(),
+		CombatAttributeSet->GetArmor(),
+		CombatAttributeSet->GetMovementSpeed(),
+		CombatAttributeSet->GetDamage());
+}
+
+void AGDSCharacter::BindAttributeChangeDelegates(UAbilitySystemComponent* AbilitySystemComponent)
+{
+	if (!IsValid(AbilitySystemComponent))
+	{
+		return;
+	}
+
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UCombatAttributeSet::GetMovementSpeedAttribute()).RemoveAll(this);
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UCombatAttributeSet::GetMovementSpeedAttribute()).AddUObject(this, &ThisClass::HandleMovementSpeedChanged);
+}
+
+void AGDSCharacter::HandleMovementSpeedChanged(const FOnAttributeChangeData& ChangeData)
+{
+	ApplyMovementSpeedToCharacter(ChangeData.NewValue);
+
+	const TCHAR* NetContext = HasAuthority() ? TEXT("Server") : TEXT("Client");
+	UE_LOG(LogGDS, Log, TEXT("[%s] MovementSpeed Delegate: %.1f -> %.1f"),
+		NetContext,
+		ChangeData.OldValue,
+		ChangeData.NewValue);
+}
+
+void AGDSCharacter::ApplyMovementSpeedToCharacter(float NewMovementSpeed)
+{
+	UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
+	if (!IsValid(MovementComponent))
+	{
+		return;
+	}
+
+	const float OldMaxWalkSpeed = MovementComponent->MaxWalkSpeed;
+	MovementComponent->MaxWalkSpeed = NewMovementSpeed;
+
+	const TCHAR* NetContext = HasAuthority() ? TEXT("Server") : TEXT("Client");
+	UE_LOG(LogGDS, Log, TEXT("[%s] MaxWalkSpeed: %.1f -> %.1f"),
+		NetContext,
+		OldMaxWalkSpeed,
+		MovementComponent->MaxWalkSpeed);
 }
